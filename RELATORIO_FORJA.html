@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Diário - Forja Fantasy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .auto-expand { min-height: 40px; overflow: hidden; resize: none; }
+        input[type="number"] { -moz-appearance: textfield; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .modal-open { overflow: hidden; }
+        .read-only-mode input, .read-only-mode select, .read-only-mode textarea { pointer-events: none; background-color: #f8fafc; border-color: #e2e8f0; }
+        .read-only-mode .btn-dynamic { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-10">
+
+    <div id="mainContainer" class="max-w-md mx-auto bg-white shadow-xl min-h-screen relative">
+        <header class="p-6 text-center border-b border-blue-100 relative">
+            <img src="https://images.tcdn.com.br/img/img_prod/750119/1751505538_logo_forja_fantasy__500px_sem_fundo.png" 
+                 alt="Logo Forja Fantasy" class="h-24 mx-auto mb-2 object-contain">
+            <h1 class="text-2xl font-bold text-blue-900 uppercase tracking-wide">Relatório Diário</h1>
+            
+            <button type="button" onclick="abrirHistorico()" class="mt-3 inline-flex items-center gap-1 text-blue-600 font-bold text-xs uppercase tracking-tighter border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-50 transition-colors">
+                🕒 Histórico de Relatórios
+            </button>
+        </header>
+
+        <div id="editBanner" class="hidden bg-amber-50 border-b border-amber-200 p-3 flex justify-between items-center">
+            <span class="text-amber-800 text-xs font-bold uppercase">Modo de Visualização</span>
+            <button type="button" onclick="habilitarEdicao()" class="bg-amber-600 text-white px-3 py-1 rounded-md text-xs font-black hover:bg-amber-700">EDITAR</button>
+        </div>
+
+        <form id="reportForm" class="p-4 space-y-6">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-blue-900">Data</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="date" id="reportDate" required class="flex-1 p-2 border border-blue-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="button" onclick="setToday()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-blue-700">Hoje</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-blue-900">Colaborador</label>
+                    <select id="collaboratorSelect" onchange="handleCollaboratorChange()" class="w-full mt-1 p-2 border border-blue-200 rounded-lg outline-none text-gray-700 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Selecione...</option>
+                        <option value="João">João</option>
+                        <option value="Leilane">Leilane</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                    <input type="text" id="otherCollaborator" placeholder="Digite seu nome" class="hidden w-full mt-2 p-2 border border-blue-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <section id="morningSection">
+                <h2 class="text-lg font-black text-sky-600 mb-4 uppercase italic flex items-center gap-2">
+                    <span class="w-2 h-6 bg-sky-400 rounded-full"></span> Manhã
+                </h2>
+                <div class="activities-container space-y-4" id="morningActivities"></div>
+                <button type="button" onclick="addActivity('morning')" class="btn-dynamic mt-4 w-full py-2 border-2 border-dashed border-sky-300 text-sky-600 rounded-lg font-bold hover:bg-sky-50">+ Atividade</button>
+            </section>
+
+            <section id="afternoonSection">
+                <h2 class="text-lg font-black text-blue-900 mb-4 uppercase italic flex items-center gap-2">
+                    <span class="w-2 h-6 bg-blue-900 rounded-full"></span> Tarde
+                </h2>
+                <div class="activities-container space-y-4" id="afternoonActivities"></div>
+                <button type="button" onclick="addActivity('afternoon')" class="btn-dynamic mt-4 w-full py-2 border-2 border-dashed border-blue-800 text-blue-900 rounded-lg font-bold hover:bg-blue-50">+ Atividade</button>
+            </section>
+
+            <div class="pt-6 space-y-3">
+                <button type="button" id="btnSalvarPlanilha" onclick="salvarNaPlanilha()" class="w-full bg-blue-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-800 transition-transform active:scale-95">💾 Salvar na Planilha</button>
+                <button type="button" onclick="copyToWhatsapp()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition-transform active:scale-95">Copiar WhatsApp</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 bg-black/60 hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 class="text-xl font-black text-blue-900">Histórico</h3>
+                <button onclick="fecharHistorico()" class="text-gray-400 hover:text-red-500">✕</button>
+            </div>
+            <div id="historyList" class="overflow-y-auto p-4 space-y-3"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-blue-900 text-white px-6 py-3 rounded-full opacity-0 pointer-events-none transition-all duration-300 z-50 shadow-2xl"></div>
+
+    <script>
+        const GAS_URL = "SUA_URL_DO_APP_SCRIPT_AQUI";
+        const ACTIVITY_OPTIONS = ["Pedidos embalados", "Cortes realizados", "Impressões", "Montagem de produtos e kits", "Etiquetagem de produtos", "Inserção no estoque", "Limpeza e organização do espaço", "Outra atividade"];
+        const PLATFORMS = ['Shopee', 'Mercado Livre', 'Amazon', 'Tray', 'TikTok', 'Magalu', 'Outro'];
+
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const dataParam = params.get('data');
+            const colabParam = params.get('colab');
+
+            if (dataParam && colabParam) {
+                // Se houver parâmetros, busca esse relatório específico
+                await carregarRelatorioEspecifico(dataParam, colabParam);
+            } else {
+                setToday();
+                addActivity('morning');
+                addActivity('afternoon');
+            }
+        };
+
+        function setToday() {
+            document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function addActivity(turn, selectedValue = null) {
+            const container = document.getElementById(`${turn}Activities`);
+            const isMorning = turn === 'morning';
+            const div = document.createElement('div');
+            div.className = `p-4 ${isMorning ? 'bg-sky-50/50 border-sky-100' : 'bg-blue-50 border-blue-200'} rounded-xl border space-y-3 relative activity-block shadow-sm`;
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <label class="text-[10px] font-bold uppercase ${isMorning ? 'text-sky-400' : 'text-blue-400'}">Atividade</label>
+                    <button type="button" onclick="this.closest('.activity-block').remove()" class="btn-dynamic text-gray-300 hover:text-red-500">✕</button>
+                </div>
+                <select onchange="handleActivityTypeChange(this, '${turn}')" class="activity-type w-full p-2 bg-white border rounded-lg text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Selecione...</option>
+                    ${ACTIVITY_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                </select>
+                <div class="content-area hidden"></div>
+            `;
+            container.appendChild(div);
+            if(selectedValue) {
+                const select = div.querySelector('.activity-type');
+                select.value = selectedValue;
+                handleActivityTypeChange(select, turn);
+            }
+            return div;
+        }
+
+        function handleActivityTypeChange(select, turn) {
+            const contentArea = select.parentElement.querySelector('.content-area');
+            const value = select.value;
+            if (!value) { contentArea.classList.add('hidden'); return; }
+            contentArea.classList.remove('hidden');
+            if (value === "Pedidos embalados") {
+                contentArea.innerHTML = `<div class="grid grid-cols-2 gap-2 mt-2">${PLATFORMS.map(plat => `<div class="bg-white p-2 rounded border border-blue-100"><label class="text-[9px] font-bold text-blue-400 uppercase block mb-1">${plat}</label><input type="number" data-platform="${plat}" placeholder="0" class="platforms-input w-full p-1 text-center font-bold outline-none border-b focus:border-blue-500"></div>`).join('')}</div>`;
+            } else {
+                contentArea.innerHTML = `<textarea placeholder="Detalhes..." class="description-input auto-expand w-full mt-2 p-2 bg-white border rounded-lg text-sm text-gray-600 outline-none focus:ring-2 focus:ring-blue-500" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>`;
+            }
+        }
+
+        async function salvarNaPlanilha() {
+            const dateVal = document.getElementById('reportDate').value;
+            const colabSelect = document.getElementById('collaboratorSelect').value;
+            const colabName = colabSelect === "Outro" ? document.getElementById('otherCollaborator').value : colabSelect;
+
+            if(!dateVal || !colabName) { alert("Preencha Data e Colaborador"); return; }
+
+            const btn = document.getElementById('btnSalvarPlanilha');
+            btn.innerHTML = "⏳ Salvando...";
+            btn.disabled = true;
+
+            const payload = { "Data do Relatório": dateVal, "Colaborador": colabName };
+            const processTurn = (turn, sufixo) => {
+                document.getElementById(`${turn}Activities`).querySelectorAll('.activity-block').forEach(block => {
+                    const type = block.querySelector('.activity-type').value;
+                    if(!type) return;
+                    if(type === "Pedidos embalados") {
+                        block.querySelectorAll('.platforms-input').forEach(i => {
+                            const val = parseInt(i.value) || 0;
+                            if(val > 0) payload[`${i.dataset.platform === 'Outro' ? 'Outros Canais' : i.dataset.platform} (${sufixo})`] = val;
+                        });
+                    } else {
+                        payload[`${type} (${sufixo})`] = block.querySelector('.description-input')?.value || 'Realizado';
+                    }
+                });
+            };
+            processTurn('morning', 'manhã');
+            processTurn('afternoon', 'tarde');
+
+            try {
+                const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const res = await response.json();
+                showToast(res.status === "Atualizado" ? "Relatório Atualizado!" : "Salvo com sucesso!");
+                if(res.status === "Atualizado") habilitarModoVisualizacao();
+            } catch (e) { alert("Erro de conexão"); }
+            btn.innerHTML = "💾 Salvar na Planilha"; btn.disabled = false;
+        }
+
+        async function abrirHistorico() {
+            const modal = document.getElementById('historyModal');
+            const list = document.getElementById('historyList');
+            modal.classList.remove('hidden');
+            list.innerHTML = '<div class="text-center py-10 text-blue-600 animate-pulse">Buscando...</div>';
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                list.innerHTML = data.map(rel => `
+                    <div onclick="abrirEmNovaAba('${rel["Data do Relatório"]}', '${rel["Colaborador"]}')" class="bg-slate-50 border p-4 rounded-xl cursor-pointer hover:bg-blue-50 transition-all active:scale-95">
+                        <div class="text-blue-900 font-bold">${rel["Colaborador"]}</div>
+                        <div class="text-xs text-gray-500">${rel["Data do Relatório"].split('-').reverse().join('/')}</div>
+                    </div>
+                `).join('');
+            } catch (e) { list.innerHTML = "Erro ao carregar"; }
+        }
+
+        function abrirEmNovaAba(data, colab) {
+            const url = `${window.location.origin}${window.location.pathname}?data=${data}&colab=${colab}`;
+            window.open(url, '_blank');
+            fecharHistorico();
+        }
+
+        async function carregarRelatorioEspecifico(dataParam, colabParam) {
+            try {
+                const response = await fetch(GAS_URL);
+                const list = await response.json();
+                const rel = list.find(r => r["Data do Relatório"] === dataParam && r["Colaborador"] === colabParam);
+                if (rel) preencherFormulario(rel);
+            } catch (e) { console.error("Erro ao carregar dados individuais"); }
+        }
+
+        function preencherFormulario(rel) {
+            document.getElementById('reportDate').value = rel["Data do Relatório"];
+            const select = document.getElementById('collaboratorSelect');
+            if (Array.from(select.options).some(o => o.value === rel["Colaborador"])) {
+                select.value = rel["Colaborador"];
+            } else {
+                select.value = "Outro";
+                const other = document.getElementById('otherCollaborator');
+                other.value = rel["Colaborador"];
+                other.classList.remove('hidden');
+            }
+            document.getElementById('morningActivities').innerHTML = "";
+            document.getElementById('afternoonActivities').innerHTML = "";
+            
+            const turnos = [{s: 'manhã', d: 'morning'}, {s: 'tarde', d: 'afternoon'}];
+            turnos.forEach(t => {
+                let hasP = false;
+                PLATFORMS.forEach(p => { if(rel[`${p === 'Outro' ? 'Outros Canais' : p} (${t.s})`] > 0) hasP = true; });
+                if(hasP) {
+                    const b = addActivity(t.d, "Pedidos embalados");
+                    PLATFORMS.forEach(p => {
+                        const val = rel[`${p === 'Outro' ? 'Outros Canais' : p} (${t.s})`];
+                        if(val) b.querySelector(`input[data-platform="${p}"]`).value = val;
+                    });
+                }
+                ACTIVITY_OPTIONS.forEach(opt => {
+                    if(opt === "Pedidos embalados") return;
+                    const val = rel[`${opt} (${t.s})`];
+                    if(val) {
+                        const b = addActivity(t.d, opt);
+                        b.querySelector('.description-input').value = val;
+                    }
+                });
+            });
+            habilitarModoVisualizacao();
+        }
+
+        function fecharHistorico() { document.getElementById('historyModal').classList.add('hidden'); }
+        function habilitarModoVisualizacao() { 
+            document.getElementById('reportForm').classList.add('read-only-mode');
+            document.getElementById('editBanner').classList.remove('hidden');
+        }
+        function habilitarEdicao() { 
+            document.getElementById('reportForm').classList.remove('read-only-mode');
+            document.getElementById('editBanner').classList.add('hidden');
+        }
+        function showToast(m) {
+            const t = document.getElementById('toast'); t.innerText = m;
+            t.classList.replace('opacity-0', 'opacity-100');
+            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 3000);
+        }
+        function handleCollaboratorChange() {
+            const s = document.getElementById('collaboratorSelect');
+            const o = document.getElementById('otherCollaborator');
+            s.value === "Outro" ? o.classList.remove('hidden') : o.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
